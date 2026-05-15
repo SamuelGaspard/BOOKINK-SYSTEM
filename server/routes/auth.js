@@ -29,7 +29,7 @@ function verifyToken(req, res, next) {
   try {
     const payload = jwt.verify(token, JWT_SECRET)
     req.user = payload
-n  } catch (err) {
+  } catch (err) {
     return res.status(401).json({ message: 'Token invalide.' })
   }
   next()
