@@ -1,68 +1,66 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-
-const initialServices = [
-  { id: 1, name: 'Consultation bien-être', duration: '45 min', price: 45, description: 'Conseil personnalisé pour maximiser votre bien-être.' },
-  { id: 2, name: 'Massage relaxant', duration: '60 min', price: 65, description: 'Massage détente pour évacuer le stress.' },
-  { id: 3, name: 'Coaching personnel', duration: '30 min', price: 35, description: 'Accompagnement sur mesure pour votre planning.' },
-]
-
-const initialAppointments = [
-  { id: 1, title: 'Massage relaxant - Client A', date: '2026-06-18' },
-  { id: 2, title: 'Consultation bien-être - Client B', date: '2026-06-20' },
-  { id: 3, title: 'Coaching personnel - Client C', date: '2026-06-24' },
-]
-
-const users = [
-  { id: 1, name: 'Client Bookink', role: 'client' },
-  { id: 2, name: 'Admin Bookink', role: 'admin' },
-  { id: 3, name: 'Prestataire Alice', role: 'staff' },
-]
+import FullCalendar from '@fullcalendar/react'
+import dayGridPlugin from '@fullcalendar/daygrid'
+import timeGridPlugin from '@fullcalendar/timegrid'
+import interactionPlugin from '@fullcalendar/interaction'
+import { servicesApi } from '../services/api.js'
+import '@fullcalendar/common/main.css'
+import '@fullcalendar/daygrid/main.css'
+import '@fullcalendar/timegrid/main.css'
 
 function Admin() {
-  const [services, setServices] = useState(initialServices)
-  const [appointments] = useState(initialAppointments)
+  const [services, setServices] = useState([])
+  const [appointments, setAppointments] = useState([])
+  const [view, setView] = useState('dayGridMonth')
   const [name, setName] = useState('')
   const [duration, setDuration] = useState('45 min')
   const [price, setPrice] = useState(45)
   const [description, setDescription] = useState('')
+  const [feedback, setFeedback] = useState('')
 
-  const currentDate = new Date()
-  const currentMonth = currentDate.toLocaleString('fr-FR', { month: 'long', year: 'numeric' })
-  const firstWeekday = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay()
-  const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate()
-
-  const calendarDays = useMemo(() => {
-    const days = []
-    for (let index = 0; index < firstWeekday; index += 1) {
-      days.push(null)
+  useEffect(() => {
+    let canceled = false
+    servicesApi.listServices().then((result) => {
+      if (!canceled) setServices(result.services)
+    })
+    servicesApi.getAppointments().then((result) => {
+      if (!canceled) setAppointments(result.appointments)
+    })
+    return () => {
+      canceled = true
     }
-    for (let day = 1; day <= daysInMonth; day += 1) {
-      days.push(new Date(currentDate.getFullYear(), currentDate.getMonth(), day))
-    }
-    return days
-  }, [currentDate, daysInMonth, firstWeekday])
+  }, [])
 
-  const appointmentsByDate = useMemo(
+  const calendarEvents = useMemo(
     () =>
-      appointments.reduce((acc, appointment) => {
-        acc[appointment.date] = [...(acc[appointment.date] || []), appointment]
-        return acc
-      }, {}),
+      appointments.map((appointment) => ({
+        id: appointment.id,
+        title: appointment.title,
+        start: appointment.date,
+      })),
     [appointments],
   )
 
-  const handleAddService = (event) => {
+  const handleAddService = async (event) => {
     event.preventDefault()
-    if (!name || !price) return
-    setServices((previous) => [
-      ...previous,
-      { id: Date.now(), name, duration, price: Number(price), description },
-    ])
-    setName('')
-    setDuration('45 min')
-    setPrice(45)
-    setDescription('')
+    setFeedback('')
+    if (!name || !duration || !price) {
+      setFeedback('Tous les champs requis doivent être remplis.')
+      return
+    }
+
+    try {
+      const response = await servicesApi.createService({ name, duration, price, description })
+      setServices((current) => [...current, response.service])
+      setName('')
+      setDuration('45 min')
+      setPrice(45)
+      setDescription('')
+      setFeedback('Service ajouté avec succès.')
+    } catch (error) {
+      setFeedback(error.message)
+    }
   }
 
   return (
@@ -81,39 +79,41 @@ function Admin() {
       <section className="dashboard-grid admin-top-grid">
         <article className="dashboard-card stats-card">
           <h2>Vue calendrier</h2>
-          <p>{currentMonth}</p>
-          <div className="calendar-grid">
-            <div className="calendar-labels">
-              <span>Dim</span>
-              <span>Lun</span>
-              <span>Mar</span>
-              <span>Mer</span>
-              <span>Jeu</span>
-              <span>Ven</span>
-              <span>Sam</span>
-            </div>
-            <div className="calendar-days">
-              {calendarDays.map((date, index) => {
-                const isoDate = date ? date.toISOString().slice(0, 10) : null
-                const events = isoDate ? appointmentsByDate[isoDate] : undefined
-                return (
-                  <div key={`${index}-${isoDate || 'empty'}`} className={events ? 'calendar-day active' : 'calendar-day'}>
-                    <span>{date ? date.getDate() : ''}</span>
-                    {events && <span className="calendar-badge">{events.length}</span>}
-                  </div>
-                )
-              })}
-            </div>
+          <div className="view-controls">
+            <button className="button button-secondary" type="button" onClick={() => setView('dayGridMonth')}>
+              Mois
+            </button>
+            <button className="button button-secondary" type="button" onClick={() => setView('timeGridWeek')}>
+              Semaine
+            </button>
+            <button className="button button-secondary" type="button" onClick={() => setView('timeGridDay')}>
+              Jour
+            </button>
           </div>
+          <FullCalendar
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            initialView={view}
+            headerToolbar={false}
+            events={calendarEvents}
+            height={520}
+            selectable
+            selectMirror
+            dayMaxEvents
+          />
         </article>
 
         <article className="dashboard-card stats-card">
-          <h2>Équipe et utilisateurs</h2>
-          <div className="user-list">
-            {users.map((user) => (
-              <div key={user.id} className="user-row">
-                <strong>{user.name}</strong>
-                <span>{user.role}</span>
+          <h2>Services</h2>
+          <p>Liste des services disponibles et ajout de nouvelles prestations.</p>
+          <div className="service-list-card">
+            {services.map((service) => (
+              <div key={service.id} className="service-row">
+                <div>
+                  <strong>{service.name}</strong>
+                  <p>{service.description}</p>
+                </div>
+                <span>{service.duration}</span>
+                <span>{service.price}€</span>
               </div>
             ))}
           </div>
@@ -122,7 +122,7 @@ function Admin() {
 
       <section className="dashboard-grid admin-bottom-grid">
         <article className="dashboard-card service-manager">
-          <h2>Services</h2>
+          <h2>Ajouter un service</h2>
           <form className="service-form" onSubmit={handleAddService}>
             <label className="field-group">
               <span>Nom du service</span>
@@ -143,21 +143,8 @@ function Admin() {
             <button className="button button-primary" type="submit">
               Ajouter le service
             </button>
+            {feedback && <div className="form-success">{feedback}</div>}
           </form>
-        </article>
-
-        <article className="dashboard-card service-list-card">
-          <h2>Liste des services</h2>
-          {services.map((service) => (
-            <div key={service.id} className="service-row">
-              <div>
-                <strong>{service.name}</strong>
-                <p>{service.description}</p>
-              </div>
-              <span>{service.duration}</span>
-              <span>{service.price}€</span>
-            </div>
-          ))}
         </article>
       </section>
     </main>
