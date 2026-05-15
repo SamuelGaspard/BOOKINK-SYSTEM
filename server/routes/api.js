@@ -31,6 +31,18 @@ router.get('/services', (req, res) => {
   res.json({ services })
 })
 
+router.post('/services', verifyToken, (req, res) => {
+  const { name, duration, price, description } = req.body
+  if (!name || !duration || !price) {
+    return res.status(400).json({ message: 'Informations de service manquantes.' })
+  }
+  const result = db
+    .prepare('INSERT INTO services (name, duration, price, description) VALUES (?, ?, ?, ?)')
+    .run(name, duration, Number(price), description || '')
+  const service = db.prepare('SELECT * FROM services WHERE id = ?').get(result.lastInsertRowid)
+  res.json({ service })
+})
+
 router.post('/bookings', verifyToken, (req, res) => {
   const { serviceId, staff, date } = req.body
   if (!serviceId || !staff || !date) {

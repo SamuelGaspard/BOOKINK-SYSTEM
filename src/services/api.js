@@ -71,6 +71,12 @@ export const servicesApi = {
   listServices() {
     return request('/services')
   },
+  createService(service) {
+    return request('/services', {
+      method: 'POST',
+      body: JSON.stringify(service),
+    })
+  },
   listBookings() {
     return request('/bookings')
   },

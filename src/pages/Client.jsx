@@ -1,51 +1,43 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
-
-const initialServices = [
-  {
-    id: 1,
-    name: 'Consultation bien-être',
-    duration: '45 min',
-    price: '45€',
-    staff: ['Alice', 'Bruno'],
-    description: 'Entretien personnalisé pour définir votre programme de soin.',
-  },
-  {
-    id: 2,
-    name: 'Massage relaxant',
-    duration: '60 min',
-    price: '65€',
-    staff: ['Carla', 'Alice'],
-    description: 'Massage détente pour évacuer le stress et améliorer le confort.',
-  },
-  {
-    id: 3,
-    name: 'Coaching personnel',
-    duration: '30 min',
-    price: '35€',
-    staff: ['Bruno'],
-    description: 'Accompagnement expert pour organiser votre planning santé.',
-  },
-]
+import { servicesApi } from '../services/api.js'
 
 const staffList = ['Alice', 'Bruno', 'Carla']
 
 function Client() {
   const auth = useAuth()
+  const [services, setServices] = useState([])
   const [selectedService, setSelectedService] = useState('')
   const [selectedStaff, setSelectedStaff] = useState('')
   const [selectedDate, setSelectedDate] = useState('')
   const [feedback, setFeedback] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let canceled = false
+    servicesApi
+      .listServices()
+      .then((result) => {
+        if (!canceled) setServices(result.services)
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!canceled) setLoading(false)
+      })
+    return () => {
+      canceled = true
+    }
+  }, [])
 
   const filteredServices = useMemo(
     () =>
-      initialServices.filter((service) => {
-        if (selectedService && service.name !== selectedService) return false
-        if (selectedStaff && !service.staff.includes(selectedStaff)) return false
+      services.filter((service) => {
+        if (selectedService && service.id.toString() !== selectedService) return false
+        if (selectedStaff && !service.staff?.includes(selectedStaff)) return false
         return true
       }),
-    [selectedService, selectedStaff],
+    [selectedService, selectedStaff, services],
   )
 
   const upcomingBookings = useMemo(
@@ -64,20 +56,25 @@ function Client() {
     [auth.user],
   )
 
-  const handleBooking = (service) => {
+  const handleBooking = async (service) => {
+    setFeedback('')
     if (!selectedDate || !selectedStaff) {
-      setFeedback('Choisissez un créneau et un membre du personnel pour réserver.')
+      setFeedback('Choisissez un créneau et un prestataire avant de réserver.')
       return
     }
 
-    auth.addBooking({
-      service: service.name,
-      staff: selectedStaff,
-      date: selectedDate,
-      status: 'Confirmé',
-    })
-    setFeedback(`Réservation pour ${service.name} confirmée le ${selectedDate}.`)
-    setSelectedDate('')
+    try {
+      await servicesApi.createBooking({
+        serviceId: service.id,
+        staff: selectedStaff,
+        date: selectedDate,
+      })
+      await auth.refreshProfile()
+      setFeedback(`Réservation pour ${service.name} confirmée le ${selectedDate}.`)
+      setSelectedDate('')
+    } catch (error) {
+      setFeedback(error.message)
+    }
   }
 
   return (
@@ -101,14 +98,13 @@ function Client() {
               <span>Service</span>
               <select value={selectedService} onChange={(e) => setSelectedService(e.target.value)}>
                 <option value="">Tous les services</option>
-                {initialServices.map((service) => (
-                  <option key={service.id} value={service.name}>
+                {services.map((service) => (
+                  <option key={service.id} value={service.id}>
                     {service.name}
                   </option>
                 ))}
               </select>
             </label>
-
             <label className="field-group">
               <span>Prestataire</span>
               <select value={selectedStaff} onChange={(e) => setSelectedStaff(e.target.value)}>
@@ -120,37 +116,40 @@ function Client() {
                 ))}
               </select>
             </label>
-
             <label className="field-group">
               <span>Créneau</span>
               <input
                 type="date"
                 value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
                 min={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setSelectedDate(e.target.value)}
               />
             </label>
           </form>
 
           {feedback && <div className="form-success">{feedback}</div>}
 
-          <div className="service-results">
-            {filteredServices.map((service) => (
-              <div key={service.id} className="service-card">
-                <div>
-                  <h3>{service.name}</h3>
-                  <p>{service.description}</p>
+          {loading ? (
+            <p>Chargement des services...</p>
+          ) : (
+            <div className="service-results">
+              {filteredServices.map((service) => (
+                <div key={service.id} className="service-card">
+                  <div>
+                    <h3>{service.name}</h3>
+                    <p>{service.description}</p>
+                  </div>
+                  <div className="service-meta">
+                    <span>{service.duration}</span>
+                    <span>{service.price}€</span>
+                    <button className="button button-primary" type="button" onClick={() => handleBooking(service)}>
+                      Réserver
+                    </button>
+                  </div>
                 </div>
-                <div className="service-meta">
-                  <span>{service.duration}</span>
-                  <span>{service.price}</span>
-                  <button className="button button-primary" type="button" onClick={() => handleBooking(service)}>
-                    Réserver
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </article>
 
         <article className="dashboard-card">
@@ -177,7 +176,7 @@ function Client() {
                 <span>{booking.staff}</span>
                 <span>{booking.date}</span>
               </div>
-            ))
+            ))}
           ) : (
             <p>Aucune réservation passée pour le moment.</p>
           )}
