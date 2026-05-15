@@ -1,112 +1,92 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { authApi } from '../services/api.js'
 
 const AuthContext = createContext(null)
 
-const initialUsers = [
-  {
-    id: 1,
-    name: 'Admin Bookink',
-    email: 'admin@bookink.local',
-    password: 'admin123',
-    role: 'admin',
-    bookings: [],
-  },
-  {
-    id: 2,
-    name: 'Client Bookink',
-    email: 'client@bookink.local',
-    password: 'client123',
-    role: 'client',
-    bookings: [],
-  },
-]
-
-function loadAuthState() {
-  if (typeof window === 'undefined') return { user: null, users: initialUsers }
-  try {
-    const saved = JSON.parse(window.localStorage.getItem('bookink-auth'))
-    if (!saved || typeof saved !== 'object') return { user: null, users: initialUsers }
-    return {
-      user: saved.user ?? null,
-      users: Array.isArray(saved.users) && saved.users.length ? saved.users : initialUsers,
-    }
-  } catch {
-    return { user: null, users: initialUsers }
-  }
-}
-
 export function AuthProvider({ children }) {
-  const [{ user: initialUser, users: initialStoredUsers }] = useState(loadAuthState)
-  const [user, setUser] = useState(initialUser)
-  const [users, setUsers] = useState(initialStoredUsers)
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    window.localStorage.setItem('bookink-auth', JSON.stringify({ user, users }))
-  }, [user, users])
-
-  const login = ({ email, password }) => {
-    const foundUser = users.find((item) => item.email === email && item.password === password)
-    if (!foundUser) {
-      return { success: false, error: 'Email ou mot de passe invalide.' }
+    const token = window?.localStorage?.getItem('bookink_token')
+    if (!token) {
+      setLoading(false)
+      return
     }
-    setUser(foundUser)
-    return { success: true }
+
+    authApi
+      .profile()
+      .then((response) => {
+        setUser({ ...response.user, bookings: response.bookings })
+      })
+      .catch(() => {
+        authApi.logout()
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [])
+
+  const login = async ({ email, password }) => {
+    try {
+      const response = await authApi.login({ email, password })
+      setUser({ ...response.user, bookings: [] })
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
   }
 
-  const register = ({ name, email, password }) => {
-    if (users.some((item) => item.email === email)) {
-      return { success: false, error: 'Cet email est déjà utilisé.' }
+  const register = async ({ name, email, password }) => {
+    try {
+      const response = await authApi.register({ name, email, password })
+      setUser({ ...response.user, bookings: [] })
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error.message }
     }
-    const newUser = {
-      id: Date.now(),
-      name,
-      email,
-      password,
-      role: 'client',
-      bookings: [],
-    }
-    setUsers((previous) => [...previous, newUser])
-    setUser(newUser)
-    return { success: true }
   }
 
   const logout = () => {
+    authApi.logout()
     setUser(null)
   }
 
-  const updateProfile = ({ name }) => {
-    if (!user) return
-    const updatedUser = { ...user, name }
-    setUser(updatedUser)
-    setUsers((previous) => previous.map((item) => (item.id === updatedUser.id ? updatedUser : item)))
+  const updateProfile = async ({ name }) => {
+    try {
+      const response = await authApi.updateProfile({ name })
+      setUser((current) => ({ ...response.user, bookings: current?.bookings ?? [] }))
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
   }
 
-  const addBooking = (booking) => {
-    if (!user) return false
-    const bookingWithId = { ...booking, id: Date.now() }
-    const updatedUser = {
-      ...user,
-      bookings: [...(user.bookings || []), bookingWithId],
+  const refreshProfile = async () => {
+    try {
+      const response = await authApi.profile()
+      setUser({ ...response.user, bookings: response.bookings })
+      return { success: true }
+    } catch (error) {
+      authApi.logout()
+      setUser(null)
+      return { success: false, error: error.message }
     }
-    setUser(updatedUser)
-    setUsers((previous) => previous.map((item) => (item.id === updatedUser.id ? updatedUser : item)))
-    return true
   }
 
   const value = useMemo(
     () => ({
       user,
-      users,
+      loading,
       login,
       logout,
       register,
       updateProfile,
-      addBooking,
+      refreshProfile,
       isAuthenticated: Boolean(user),
       isAdmin: user?.role === 'admin',
     }),
-    [user, users],
+    [user, loading],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

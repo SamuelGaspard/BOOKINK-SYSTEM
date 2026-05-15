@@ -20,12 +20,12 @@ function Login() {
     }
   }, [auth.isAuthenticated])
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
 
     if (mode === 'login') {
-      const result = auth.login({ email, password })
+      const result = await auth.login({ email, password })
       if (result.success) {
         navigate(from, { replace: true })
       } else {
@@ -34,7 +34,7 @@ function Login() {
       return
     }
 
-    const result = auth.register({ name, email, password })
+    const result = await auth.register({ name, email, password })
     if (result.success) {
       navigate('/client', { replace: true })
     } else {
