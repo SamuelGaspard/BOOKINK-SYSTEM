@@ -29,8 +29,9 @@ export function AuthProvider({ children }) {
 
   const login = async ({ email, password }) => {
     try {
-      const response = await authApi.login({ email, password })
-      setUser({ ...response.user, bookings: [] })
+      await authApi.login({ email, password })
+      const response = await authApi.profile()
+      setUser({ ...response.user, bookings: response.bookings })
       return { success: true }
     } catch (error) {
       return { success: false, error: error.message }

@@ -6,10 +6,14 @@ function Profile() {
   const [name, setName] = useState(auth.user?.name || '')
   const [message, setMessage] = useState('')
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    auth.updateProfile({ name })
-    setMessage('Profil mis à jour avec succès.')
+    const result = await auth.updateProfile({ name })
+    if (result.success) {
+      setMessage('Profil mis à jour avec succès.')
+    } else {
+      setMessage(result.error || 'Impossible de mettre à jour le profil.')
+    }
   }
 
   return (

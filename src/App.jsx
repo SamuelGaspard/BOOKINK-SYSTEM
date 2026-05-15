@@ -8,10 +8,13 @@ import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 
 function RequireAuth({ children, requiredRole }) {
   const auth = useAuth()
+  if (auth.loading) {
+    return <div className="loading-screen">Chargement...</div>
+  }
   if (!auth.isAuthenticated) {
     return <Navigate to="/login" replace />
   }
-  if (requiredRole && auth.user.role !== requiredRole) {
+  if (requiredRole && auth.user?.role !== requiredRole) {
     return <Navigate to="/" replace />
   }
   return children
