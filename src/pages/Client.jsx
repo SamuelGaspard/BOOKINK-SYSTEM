@@ -176,7 +176,7 @@ function Client() {
                 <span>{booking.staff}</span>
                 <span>{booking.date}</span>
               </div>
-            ))}
+            ))
           ) : (
             <p>Aucune réservation passée pour le moment.</p>
           )}
