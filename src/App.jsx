@@ -1,29 +1,34 @@
+import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
+import Home from './pages/Home.jsx'
+import Client from './pages/Client.jsx'
+import Admin from './pages/Admin.jsx'
+
 function App() {
   return (
-    <div className="app-shell">
-      <header className="hero">
-        <div className="hero-content">
-          <p className="eyebrow">Système de Réservation</p>
-          <h1>Bookink</h1>
-          <p>Réservez facilement un service, gérez vos rendez-vous et suivez vos réservations.</p>
-          <div className="cards">
-            <section className="card">
-              <h2>Client</h2>
-              <p>Trouvez un prestataire, choisissez un créneau et restez informé.</p>
-            </section>
-            <section className="card">
-              <h2>Administrateur</h2>
-              <p>Supervisez les rendez-vous, gérez les services et optimisez le planning.</p>
-            </section>
+    <BrowserRouter>
+      <div className="app-shell">
+        <nav className="top-nav">
+          <div className="logo">Bookink</div>
+          <div className="nav-links">
+            <NavLink to="/" end className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+              Accueil
+            </NavLink>
+            <NavLink to="/client" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+              Client
+            </NavLink>
+            <NavLink to="/admin" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+              Admin
+            </NavLink>
           </div>
-        </div>
-      </header>
-      <section className="starter">
-        <div className="step">1. Créez votre compte</div>
-        <div className="step">2. Choisissez un service</div>
-        <div className="step">3. Confirmez votre rendez-vous</div>
-      </section>
-    </div>
+        </nav>
+
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/client" element={<Client />} />
+          <Route path="/admin" element={<Admin />} />
+        </Routes>
+      </div>
+    </BrowserRouter>
   )
 }
 
