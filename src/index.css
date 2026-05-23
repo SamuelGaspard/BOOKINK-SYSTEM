@@ -5,6 +5,37 @@
   color: #111827;
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -43,6 +74,8 @@ body {
   position: sticky;
   top: 1rem;
   z-index: 10;
+  transition: all 0.5s ease, box-shadow 0.5s ease;
+  backdrop-filter: blur(10px);
 }
 
 .logo {
@@ -64,13 +97,14 @@ body {
   text-decoration: none;
   color: #4f46e5;
   font-weight: 600;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: background 0.4s cubic-bezier(0.23, 1, 0.320, 1), color 0.4s ease, transform 0.3s ease;
 }
 
 .nav-link:hover,
 .nav-link.active {
   background: #eef2ff;
   color: #312e81;
+  transform: translateX(4px);
 }
 
 .page {
@@ -106,11 +140,12 @@ body {
   border-radius: 14px;
   font-weight: 700;
   text-decoration: none;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.5s ease, background 0.4s ease;
 }
 
 .button:hover {
-  transform: translateY(-1px);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 24px rgba(79, 70, 229, 0.24);
 }
 
 .button-primary {
@@ -141,6 +176,18 @@ body {
   border-radius: 24px;
   padding: 1.8rem;
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+  transition: transform 0.5s cubic-bezier(0.23, 1, 0.320, 1), box-shadow 0.5s ease;
+  animation: slideUp 0.6s ease-out;
+}
+
+.feature-card:hover,
+.dashboard-card:hover,
+.auth-card:hover,
+.profile-card:hover,
+.stats-card:hover,
+.service-list-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.12);
 }
 
 .feature-card h2,
@@ -198,7 +245,27 @@ body {
   border-radius: 16px;
   padding: 0.95rem 1rem;
   font-size: 1rem;
-  background: #f9fafb;
+  background: #ffffff;
+  color: #111827;
+  transition: all 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+  font-family: inherit;
+}
+
+.field-group input::placeholder,
+.field-group select::placeholder,
+.field-group textarea::placeholder {
+  color: #9ca3af;
+  opacity: 1;
+}
+
+.field-group input:focus,
+.field-group select:focus,
+.field-group textarea:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  transform: scale(1.01);
+  background: #ffffff;
 }
 
 .field-group textarea {
@@ -215,6 +282,8 @@ body {
   background: #fee2e2;
   padding: 1rem;
   border-radius: 16px;
+  animation: slideUp 0.5s ease-out;
+  transition: all 0.4s ease;
 }
 
 .form-success {
@@ -222,6 +291,8 @@ body {
   background: #d1fae5;
   padding: 1rem;
   border-radius: 16px;
+  animation: slideUp 0.5s ease-out;
+  transition: all 0.4s ease;
 }
 
 .service-results,
@@ -248,6 +319,13 @@ body {
   padding: 1.4rem;
   border-radius: 22px;
   background: #f8fafc;
+  transition: all 0.5s cubic-bezier(0.23, 1, 0.320, 1);
+}
+
+.service-card:hover {
+  background: #f0f4ff;
+  transform: translateX(8px);
+  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.1);
 }
 
 .service-meta {
